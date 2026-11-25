@@ -1,0 +1,55 @@
+{
+  "name": "StarBreaker: Unlimited Drill",
+  "ts": 1795595595167,
+  "d": {
+    "v": 1,
+    "gold": 2468000,
+    "gems": 13579,
+    "prestige": 4200,
+    "scrap": 0,
+    "sector": 5,
+    "planet": 4,
+    "weapons": {
+      "gatling": 21,
+      "mortar": 9
+    },
+    "equipped": [
+      "gatling",
+      "mortar",
+      "chain",
+      "missile"
+    ],
+    "satellites": {
+      "collector": 3,
+      "bomber": 2,
+      "beam": 5
+    },
+    "gear": {
+      "hull": 1,
+      "reactor": 1,
+      "engine": 1
+    },
+    "skills": {
+      "dmg_epic": 3,
+      "coin_rare": 2
+    },
+    "passClaimed": {
+      "1": true,
+      "2": true,
+      "3": true
+    },
+    "bundles": {
+      "starter_pack": true
+    },
+    "prestigeMult": 1,
+    "stats": {
+      "blocks": 54321,
+      "planets": 11,
+      "dice": 7
+    },
+    "settings": {
+      "speed": 1
+    },
+    "lastSave": 1795595594546
+  }
+}

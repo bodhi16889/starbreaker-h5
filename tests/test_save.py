@@ -56,7 +56,7 @@ def main():
         pA.on("pageerror", lambda e: errs.append(str(e)[:200]))
         boot(pA)
 
-        tabs = pA.eval_on_selector_all("#tabs button", "els=>els.map(e=>e.dataset.tab)")
+        tabs = pA.eval_on_selector_all(".rail button", "els=>els.map(e=>e.dataset.tab)")
         ok("第六個分頁是存檔", tabs[-1] == "save", str(tabs))
 
         pA.evaluate("""(() => { const s = State.data;

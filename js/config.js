@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '0.4.0';
+  const VERSION = '0.5.0';
 
   /* ---------- 星球與方塊 ---------- */
   const PLANET = {
@@ -181,6 +181,10 @@
     '已下載': 'downloaded', '最近寫入': 'Last write', '自動存': 'auto-save',
     '偵測到分享的存檔': 'Shared save detected', '載入會覆蓋本機進度': 'Loading will overwrite this device save.',
     '載入這個存檔': 'Load this save', '先不要': 'Not now', '存檔碼無效': 'Invalid save code',
+    '設定': 'Settings', '無限補給站': 'Unlimited supply', '速度': 'Speed', '重置存檔': 'Reset save',
+    '再按一次確認重置': 'Tap again to confirm', '重置會清掉本機進度；要保留就先把存檔碼複製出去。': 'Reset wipes local progress — copy the save code first.',
+    '鎖定模式': 'Target mode', '最近': 'Nearest', '補刀': 'Weakest', '肥羊': 'Richest',
+    '金幣不足': 'Not enough CR', '已重置': 'Reset done', '解鎖': 'Unlocked',
   };
 
   function T(zh) { return (global.LANG === 'zh') ? zh : (EN[zh] || zh); }

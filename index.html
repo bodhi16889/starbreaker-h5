@@ -9,34 +9,44 @@
 </head>
 <body>
 <div id="app">
-  <header id="hud">
-    <button id="btnSupply" class="supply-btn">💎 <span data-i18n="補給站">補給站</span></button>
-    <div class="res">
-      <span class="chip"><i>🪙</i><b id="resGold">0</b></span>
-      <span class="chip"><i>💎</i><b id="resGems">0</b></span>
-      <span class="chip"><i>✨</i><b id="resPrestige">0</b></span>
-    </div>
-    <button id="btnSpeed" class="speed-btn">×1</button>
-  </header>
-
   <div id="stage">
     <canvas id="game"></canvas>
-    <button id="verBadge" class="ver-badge" type="button" aria-label="版本資訊">v—</button>
-    <div id="sectorInfo">
-      <span id="sectorLabel">星區 1-1</span>
-      <span id="blocksLeft">0 blocks</span>
-      <span id="fpsLabel">60 fps</span>
+
+    <div id="overlay">
+      <div class="topbar">
+        <span class="coin" title="寶石"><i>💎</i><b id="resGems">0</b></span>
+        <div class="credits">
+          <div class="cr"><b id="resGold">0</b><span>CR</span></div>
+          <div class="mult" id="resMult">×1.00</div>
+        </div>
+        <div class="planetbox">
+          <canvas id="planetThumb" width="46" height="46"></canvas>
+          <div class="pinfo">
+            <span id="galaxyLabel">Galaxy 1</span>
+            <span id="planetLabel">Planet 1</span>
+            <b id="blocksLeft">0/0</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail">
+        <button data-tab="settings" title="設定">⚙</button>
+        <button data-tab="sats" title="衛星">🛰<span class="badge" data-badge="sats"></span></button>
+        <button data-tab="skills" title="技能">🎲<span class="badge" data-badge="skills"></span></button>
+        <button data-tab="pass" title="通行證">🎫<span class="badge" data-badge="pass"></span></button>
+        <button data-tab="bundles" title="禮包">🎁</button>
+        <button data-tab="save" title="存檔">💾</button>
+      </div>
+
+      <button class="aim" id="btnAim" title="切換鎖定目標">🎯<span id="aimLabel">最近</span></button>
+      <button id="verBadge" class="ver-badge" type="button" aria-label="版本資訊">v—</button>
+      <div id="fpsBox"><span id="fpsLabel">60 fps</span></div>
     </div>
   </div>
 
-  <nav id="tabs">
-    <button data-tab="weapons">🔫<span data-i18n="武器">武器</span></button>
-    <button data-tab="sats">🛰<span data-i18n="衛星">衛星</span></button>
-    <button data-tab="skills">🎲<span data-i18n="技能">技能</span></button>
-    <button data-tab="pass">🎫<span data-i18n="通行證">通行證</span></button>
-    <button data-tab="bundles">🎁<span data-i18n="禮包">禮包</span></button>
-    <button data-tab="save">💾<span data-i18n="存檔">存檔</span></button>
-  </nav>
+  <div id="ui-layer">
+    <div class="bottom" id="bottom"></div>
+  </div>
 
   <div id="modal" class="modal hidden">
     <div class="modal-card">

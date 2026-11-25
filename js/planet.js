@@ -5,7 +5,8 @@
   function makePlanet(sector, planet, cx, cy, viewW, viewH) {
     const P = CFG.PLANET;
     const grid = Math.min(P.gridMax, P.gridMin + (sector - 1) * 2);
-    const cell = Math.max(8, Math.floor(Math.min(viewW, viewH) * 0.86 / grid));   // 下限：避免量到 0 高度時產生 0 尺寸
+    /* 0.70 讓星球留出飛船環繞軌道（radius + 46）的空間，不會被畫面邊緣裁掉 */
+    const cell = Math.max(8, Math.floor(Math.min(viewW, viewH) * 0.70 / grid));   // 下限：避免量到 0 高度時產生 0 尺寸
     const half = (grid - 1) / 2;
     const baseHp = P.hpBase * Math.pow(P.hpPerSector, sector - 1) * Math.pow(P.hpPerPlanet, planet - 1);
 

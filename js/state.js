@@ -11,7 +11,7 @@
       v: SAVE_VERSION,
       gold: 0, gems: 500, prestige: 0, scrap: 0,
       sector: 1, planet: 1,
-      weapons: {},                 // id -> 等級
+      weapons: { gatling: 1, mortar: 1, chain: 1, missile: 1 },   // id -> 等級（出戰預設 1 級）
       equipped: ['gatling', 'mortar', 'chain', 'missile'],
       satellites: {},              // id -> 星級
       gear: { hull: 1, reactor: 1, engine: 1 },
@@ -48,6 +48,11 @@
     if (!out.gear || typeof out.gear !== 'object') out.gear = { hull: 1, reactor: 1, engine: 1 };
     CFG.GEAR.forEach((g) => { out.gear[g.id] = Math.max(1, Math.floor(Number(out.gear[g.id]) || 1)); });
     if (!Array.isArray(out.equipped)) out.equipped = ['gatling'];
+    /* 舊存檔可能沒有武器等級（顯示 Lv.0）→ 出戰武器至少 1 級 */
+    if (!out.weapons || typeof out.weapons !== 'object') out.weapons = {};
+    out.equipped.forEach((id) => {
+      if (!out.weapons[id] || out.weapons[id] < 1) out.weapons[id] = 1;
+    });
     out.equipped = out.equipped.filter((id) => CFG.WEAPONS.some((w) => w.id === id)).slice(0, CFG.BALANCE.weaponSlots);
     if (!out.equipped.length) out.equipped = ['gatling'];
     if (!out.settings || typeof out.settings !== 'object') out.settings = { speed: 1 };

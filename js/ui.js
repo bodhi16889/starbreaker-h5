@@ -7,22 +7,124 @@
 
   let hudAt = 0;
 
-  /* ---------- HUD ---------- */
+  /* ---------- HUD（Auto Drill: Galaxy 版面） ---------- */
+  let lastBlockText = '';
+
   function renderHud() {
     const s = State.data;
     $('#resGold').textContent = BIG.fmtInt(s.gold);
     $('#resGems').textContent = BIG.fmtInt(s.gems);
-    $('#resPrestige').textContent = BIG.fmtInt(s.prestige);
-    $('#sectorLabel').textContent = `${T('星區')} ${s.sector}-${s.planet}`;
-    const left = global.Game.planet ? global.Game.planet.alive : 0;
-    $('#blocksLeft').textContent = `${T('本星球剩餘')} ${left}`;
+    $('#resMult').textContent = '×' + State.prestigeMult().toFixed(2);
+    $('#galaxyLabel').textContent = 'Galaxy ' + s.sector;
+    $('#planetLabel').textContent = 'Planet ' + s.planet;
     $('#fpsLabel').textContent = `${global.Game.fps} fps`;
-    const sp = State.speed();
-    const spBtn = $('#btnSpeed');
-    spBtn.textContent = '×' + sp;
-    spBtn.classList.toggle('on', sp > 1);
     const vb = $('#verBadge');
     if (vb) vb.textContent = 'v' + CFG.VERSION;
+    setBlockCount();
+    renderBottom();
+    const badge = (k, v) => {
+      const el = document.querySelector(`[data-badge="${k}"]`);
+      if (el) { el.textContent = v; el.style.display = v ? 'block' : 'none'; }
+    };
+    badge('sats', String(CFG.SATELLITES.filter((x) => State.satLevel(x.id) > 0).length));
+    const left = CFG.PASS_TIERS.filter((t) => !s.passClaimed[t.tier]).length;
+    badge('pass', left ? String(left) : '');
+    const sk = Object.values(s.skills || {}).reduce((a, b) => a + b, 0);
+    badge('skills', sk ? '' : '');
+  }
+
+  /* 每幀更新剩餘方塊數（只在 state 變動時整頁重繪會卡住） */
+  function setBlockCount() {
+    const P = global.Game.planet;
+    if (!P) return;
+    const alive = P.alive || 0;
+    const total = (P.blocks || []).length || 0;
+    const txt = `${alive}/${BIG.fmtInt(total)}`;
+    if (txt !== lastBlockText) {
+      lastBlockText = txt;
+      const el = $('#blocksLeft');
+      if (el) el.textContent = txt;
+      drawThumb(alive, total);
+    }
+  }
+
+  /* 右上角星球進度環 */
+  function drawThumb(alive, total) {
+    const c = $('#planetThumb');
+    if (!c) return;
+    const g = c.getContext('2d');
+    if (!g) return;
+    g.clearRect(0, 0, c.width, c.height);
+    g.fillStyle = '#0a1220';
+    g.beginPath(); g.arc(23, 23, 21, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#2a4a6e'; g.lineWidth = 1; g.stroke();
+    const ratio = total ? alive / total : 1;
+    g.strokeStyle = ratio > 0.5 ? '#7ad7ff' : ratio > 0.2 ? '#ffd166' : '#ff6b6b';
+    g.lineWidth = 4;
+    g.beginPath();
+    g.arc(23, 23, 17, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * ratio);
+    g.stroke();
+  }
+
+  /* ---------- 底部：1 加速 + 3 武器 + 3 技能，加三張武器卡 ---------- */
+  const WEAPON_ICON = { lance: '🗡', gatling: '🔫', mortar: '💣', chain: '⚡', saw: '🪚',
+    laser: '🔆', missile: '🚀', gravity: '🕳', cryo: '❄', buster: '☄' };
+
+  function dpsOf(id) {
+    const w = CFG.WEAPONS.find((x) => x.id === id);
+    const lv = State.weaponLevel(id);
+    const per = State.atk() * w.dmg * (1 + lv * 0.12);
+    const crit = 1 + State.critChance() * (State.critMult() - 1);
+    return (per / w.interval) * State.attackSpeed() * crit;
+  }
+
+  function renderBottom() {
+    const box = $('#bottom');
+    if (!box) return;
+    const s = State.data;
+    const eq = s.equipped.slice(0, 3);
+    const skills = State.skillList().slice(0, 3);
+
+    const slots = [
+      `<button class="slot boost" data-open="settings"><span class="ic">⚡</span><span class="lvl">×${State.speed()}</span></button>`,
+      ...eq.map((id) => `<button class="slot weapon" data-open="weapons"><span class="ic">${WEAPON_ICON[id] || '🔫'}</span><span class="lvl">${State.weaponLevel(id)}</span></button>`),
+      ...Array.from({ length: Math.max(0, 3 - eq.length) }, () => '<button class="slot empty" data-open="weapons"><span class="ic">＋</span></button>'),
+      ...skills.map((sk) => `<button class="slot skill" data-open="skills"><span class="ic">✦</span><span class="lvl">${sk.count}</span></button>`),
+      ...Array.from({ length: Math.max(0, 3 - skills.length) }, () => '<button class="slot empty" data-open="skills"><span class="ic">＋</span></button>'),
+    ].join('');
+
+    const cards = eq.map((id) => {
+      const w = CFG.WEAPONS.find((x) => x.id === id);
+      const cost = State.weaponCost(id);
+      return `<div class="wcard">
+        <div class="wname">${w.name}<span>Lv. ${State.weaponLevel(id)}</span></div>
+        <div class="wdps">DPS ${BIG.fmt(dpsOf(id))}/s</div>
+        <button class="wbuy" data-upw="${id}" ${s.gold < cost ? 'disabled' : ''}>${BIG.fmtInt(cost)}<span>CR</span></button>
+      </div>`;
+    }).join('');
+
+    const locked = CFG.WEAPONS
+      .map((w, i) => ({ w, cost: 3000 * Math.pow(6, i) }))
+      .filter((x) => State.weaponLevel(x.w.id) === 0)
+      .sort((a, b) => a.cost - b.cost)[0];
+
+    box.innerHTML = `<div class="slots">${slots}</div><div class="wcards">${cards}</div>` +
+      (locked ? `<button class="unlock" id="btnUnlock" ${s.gold < locked.cost ? 'disabled' : ''}>UNLOCK WEAPON ${BIG.fmtInt(locked.cost)} CR · ${locked.w.name}</button>` : '');
+
+    box.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openTab(b.dataset.open)));
+    box.querySelectorAll('[data-upw]').forEach((b) => b.addEventListener('click', () => {
+      const r = State.upgradeWeapon(b.dataset.upw);
+      if (!r.ok) return toast(T('金幣不足'));
+      State.save(); renderHud();
+    }));
+    const un = box.querySelector('#btnUnlock');
+    if (un) un.addEventListener('click', () => {
+      if (State.data.gold < locked.cost) return toast(T('金幣不足'));
+      State.data.gold -= locked.cost;
+      State.data.weapons[locked.w.id] = 1;
+      State.save(); renderHud();
+      toast('解鎖 ' + locked.w.name);
+    });
   }
 
   /* ---------- 版本資訊（右下徽章點開） ---------- */
@@ -202,6 +304,41 @@
       <div class="hint">沙盒設計：所有禮包都是 <b style="color:var(--ok)">FREE</b>，點即發放，不串接任何商店。</div>
       ${rows}`);
     bind('bundles');
+  }
+
+  /* ---------- 設定（補給站／速度／重置） ---------- */
+  function tabSettings() {
+    const s = State.data;
+    openModal(T('設定'), `
+      <div class="row"><div class="grow"><div class="name">StarBreaker: Unlimited Drill</div>
+        <div class="sub">${T('版本')} v${CFG.VERSION} · ${T('星區')} ${s.sector}-${s.planet} · ${T('已擊破')} ${BIG.fmtInt(s.stats.blocks || 0)}</div></div></div>
+      <button class="btn wide primary" id="btnSupply">⚡ ${T('無限補給站')}</button>
+      <button class="btn wide" id="btnSpeed">${T('速度')} ×${State.speed()}</button>
+      <button class="btn wide" data-open="save">💾 ${T('存檔備份')}</button>
+      <button class="btn wide" data-open="sats">🛰 ${T('衛星')}</button>
+      <button class="btn wide danger" id="btnReset">${T('重置存檔')}</button>
+      <div class="hint">${T('重置會清掉本機進度；要保留就先把存檔碼複製出去。')}</div>`);
+    const body = $('#modalBody');
+    body.querySelector('#btnSupply').addEventListener('click', tabSupply);
+    body.querySelector('#btnSpeed').addEventListener('click', () => {
+      const next = State.speed() === 1 ? 2 : State.speed() === 2 ? 3 : 1;
+      State.data.settings.speed = next;
+      State.save(); renderHud(); tabSettings();
+    });
+    body.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', () => openTab(b.dataset.open)));
+    const reset = body.querySelector('#btnReset');
+    reset.addEventListener('click', () => {
+      if (reset.dataset.armed === '1') {
+        State.data.gold = 0; State.data.gems = 500; State.data.prestige = 0;
+        State.data.sector = 1; State.data.planet = 1;
+        global.Game.newPlanet();
+        State.save(); renderHud(); closeModal(); toast('已重置');
+      } else {
+        reset.dataset.armed = '1';
+        reset.textContent = T('再按一次確認重置');
+        setTimeout(() => { if (reset) { reset.dataset.armed = ''; reset.textContent = T('重置存檔'); } }, 4000);
+      }
+    });
   }
 
   /* ---------- 存檔備份（存檔碼 SB2／分享連結／JSON 檔） ---------- */
@@ -444,7 +581,8 @@
 
     /* HUD 節流（每 200ms） */
     global.Game.G.onTick = () => {
-      if (performance.now() - hudAt < 200) return;
+      setBlockCount();
+      if (performance.now() - hudAt < 300) return;
       hudAt = performance.now();
       renderHud();
     };
@@ -453,24 +591,20 @@
     /* 靜態字串（分頁、補給站按鈕）跟著語系走 */
     document.querySelectorAll('[data-i18n]').forEach((el) => { el.textContent = T(el.dataset.i18n); });
 
-    document.querySelectorAll('#tabs button').forEach((b) => b.addEventListener('click', () => {
-      const t = b.dataset.tab;
-      if (t === 'weapons') tabWeapons();
-      else if (t === 'sats') tabSats();
-      else if (t === 'skills') tabSkills();
-      else if (t === 'pass') tabPass();
-      else if (t === 'bundles') tabBundles();
-      else if (t === 'save') tabSave();
-    }));
-    $('#btnSupply').addEventListener('click', tabSupply);
+    document.querySelectorAll('.rail button').forEach((b) => b.addEventListener('click', () => openTab(b.dataset.tab)));
+
+    /* 瞄準模式：最近 → 補刀 → 肥羊 */
+    const AIM = [['nearest', '最近'], ['weakest', '補刀'], ['richest', '肥羊']];
+    let aimIdx = 0;
+    $('#btnAim').addEventListener('click', () => {
+      aimIdx = (aimIdx + 1) % AIM.length;
+      global.Game.setTargetMode(AIM[aimIdx][0]);
+      $('#aimLabel').textContent = T(AIM[aimIdx][1]);
+      toast(T('鎖定模式') + '：' + T(AIM[aimIdx][1]));
+    });
     $('#modalClose').addEventListener('click', closeModal);
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
     if ($('#verBadge')) $('#verBadge').addEventListener('click', showVersion);
-    $('#btnSpeed').addEventListener('click', () => {
-      const next = State.speed() === 1 ? 2 : State.speed() === 2 ? 3 : 1;
-      State.data.settings.speed = next;
-      State.save(); renderHud();
-    });
 
     bindControls(canvas);
 
@@ -481,17 +615,27 @@
     renderHud();
     State.on(renderHud);
 
+    /* 底部面板填好之後 #stage 會變矮；不重算 canvas 會溢出蓋住面板 */
+    fit();
+    requestAnimationFrame(fit);
+    if (window.ResizeObserver) new ResizeObserver(() => fit()).observe($('#stage'));
+
     if (location.hash.indexOf('#save=') === 0) {
       const code = decodeURIComponent(location.hash.slice(6));
       setTimeout(() => confirmImport(code), 400);
     }
   }
 
-  global.UI = { boot, renderHud, toast, openModal, closeModal, tabSupply };
+  function openTab(n) {
+    ({ weapons: tabWeapons, sats: tabSats, skills: tabSkills, pass: tabPass,
+       bundles: tabBundles, save: tabSave, settings: tabSettings, supply: tabSupply }[n] || (() => {}))();
+  }
+
+  global.UI = { boot, renderHud, toast, openModal, closeModal, tabSupply, openTab };
   global.__game = {
     State, Game: global.Game, CFG, BIG,
     get ready() { return true; },
-    openTab: (n) => ({ weapons: tabWeapons, sats: tabSats, skills: tabSkills, pass: tabPass, bundles: tabBundles, save: tabSave, supply: tabSupply }[n] || (() => {})()),
+    openTab,
     confirmImport,
   };
 

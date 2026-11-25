@@ -58,6 +58,20 @@ cd ~/work/starbreaker-h5
 - **沒有多語系完整翻譯**：`?lang=en` 只切 UI 標題，武器／技能名稱仍是中文。
 - **沒有雲端存檔**：只有 localStorage（主檔 ＋ `.bak` 備援，壞檔會回退）。
 
+## UI 對齊 Auto Drill: Galaxy（v0.5.0）
+
+Vite+TS 版（v1.2.0）的 Auto Drill 版面同步搬過來，兩邊畫面一致：
+
+| 位置 | 內容 |
+|---|---|
+| 頂部 | 💎 寶石（左）｜大數字 `CR` + `×倍率`（中）｜星球縮圖 + `Galaxy N / Planet M / 剩餘/總方塊`（右） |
+| 左側 | ⚙ 設定、🛰 衛星、🎲 技能、🎫 通行證、🎁 禮包、💾 存檔（未領數紅點） |
+| 右側 | 🎯 鎖定模式：最近 → 補刀 → 肥羊 |
+| 底部 | 1 加速 + 3 武器（粉框）+ 3 技能（綠框）= 7 格；三張武器卡 `Lv / DPS / 花費 CR`；`UNLOCK WEAPON … CR` |
+| 畫布 | 方塊加霓虹邊、傷害跳字帶 `CR`、星球縮到 0.70 留飛船軌道、飛船夾在畫面內 |
+
+「⚡ 無限補給站」「速度 ×1/×2/×3」「重置存檔」都收進 ⚙ 設定。
+
 ## 存檔備份與跨裝置（v0.4.0）
 
 第六個分頁「💾 存檔」：
@@ -114,7 +128,7 @@ js/game.js          主循環、飛船、武器、衛星、物件池、canvas �
 js/ui.js            HUD 與彈窗（唯一碰 DOM 的檔案）
 tests/smoke.py      Playwright 22 項（含 640×480、存檔、搖桿、清空推進）
 tests/test_sats.py  Playwright 16 項（Step 3 衛星：軌道半徑、六顆不重疊、五種能力計數、傷害公式）
-tests/test_ui.py    Playwright 31 項
+tests/test_ui.py    Playwright 33 項
 tests/test_save.py  Playwright 18 項（存檔碼／分享連結／JSON 檔／跨裝置）（Step 4 介面：五分頁、+1/+10、+5、50 階單階領取、3 禮包、補給站五項、三種螢幕尺寸無溢出）
 ```
 
@@ -124,4 +138,4 @@ tests/test_save.py  Playwright 18 項（存檔碼／分享連結／JSON 檔／�
 /usr/bin/python3 tests/smoke.py      # 22 項
 ```
 
-目前狀態：**smoke 22 ＋ sats 16 ＋ ui 31 ＋ save 18 = 87 PASS / 0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。
+目前狀態：**smoke 22 ＋ sats 16 ＋ ui 33 ＋ save 18 = 89 PASS / 0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。

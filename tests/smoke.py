@@ -90,6 +90,8 @@ def main():
 
         # ---------- 無限補給站 ----------
         gems0 = page.evaluate("State.data.gems")
+        page.evaluate("__game.openTab('settings')")
+        time.sleep(0.3)
         page.click("#btnSupply")
         time.sleep(0.4)
         page.click('[data-sup="gems"]')
@@ -172,8 +174,10 @@ def main():
             sector: State.data.sector, planet: State.data.planet,
             alive: __game.Game.planet.alive, planets: State.data.stats.planets
         }))()""")
-        ok("清空星球會推進到下一顆並重生方塊",
-           nxt["alive"] > 20 and nxt["planets"] > clear["planets"],
+        # 高裝況下星球會自然連續清空，所以「推進」看三種跡象任一即可
+        moved = (nxt["planets"] > clear["planets"]
+                 or (nxt["sector"], nxt["planet"]) != (clear["sector"], clear["planet"]))
+        ok("清空星球會推進到下一顆並重生方塊", nxt["alive"] > 20 and moved,
            json.dumps(nxt, ensure_ascii=False))
 
         # ---------- 存檔 ----------
@@ -189,16 +193,18 @@ def main():
 
         # ---------- 版面與安全區 ----------
         layout = page.evaluate("""(() => {
-            const tabs = [...document.querySelectorAll('#tabs button')].map(b => b.getBoundingClientRect().height);
-            const supply = document.getElementById('btnSupply').getBoundingClientRect();
+            const rail = [...document.querySelectorAll('.rail button')].map(b => b.getBoundingClientRect().height);
+            const slots = [...document.querySelectorAll('.slot')].map(b => b.getBoundingClientRect().height);
+            const aim = document.getElementById('btnAim').getBoundingClientRect();
             const app = getComputedStyle(document.getElementById('app'));
             return {
-                tabMin: Math.min(...tabs), supplyH: supply.height,
+                railMin: Math.min(...rail), slotMin: Math.min(...slots), aimH: aim.height,
                 safeTop: app.paddingTop, overflowX: document.documentElement.scrollWidth > window.innerWidth + 1,
                 canvasW: document.getElementById('game').clientWidth
             };
         })()""")
-        ok("分頁與按鈕高度 ≥44px", layout["tabMin"] >= 44 and layout["supplyH"] >= 34,
+        ok("圖示列／裝備格／瞄準鈕高度 ≥44px",
+           layout["railMin"] >= 44 and layout["slotMin"] >= 44 and layout["aimH"] >= 44,
            json.dumps(layout))
         ok("沒有橫向溢出", layout["overflowX"] is False)
 

@@ -52,7 +52,7 @@
 
   /* 傷害數字上限：六衛星 + 十武器同時打會一次噴出上百個數字，
      實測整片星球被文字蓋住。超過上限就找人最多的位置疊加，不新增。 */
-  const FLOATER_MAX = 18;
+  const FLOATER_MAX = 8;
   function spawnFloater(x, y, text, color) {
     const alive = G.floaters.filter((f) => f.alive);
     if (alive.length >= FLOATER_MAX) {
@@ -134,8 +134,8 @@
       const bits = [];
       if (res.gold) {
         const val = Math.max(1, Math.round(res.gold * CFG.ECON.coinBase * Math.pow(CFG.ECON.coinPerSector, G.planet.sector - 1) * goldMul));
-        spawnDrop(block.x, block.y, 'gold', val);
-        bits.push('+' + BIG.fmt(val));
+        /* 每格都掉會讓畫面被金幣淹掉（對照參考遊戲只看得到少量掉落）→ 60% 掉落、金額補回 */
+        if (Math.random() < 0.6) { spawnDrop(block.x, block.y, 'gold', Math.round(val / 0.6)); bits.push('+' + BIG.fmt(val)); }
       }
       if (res.gems) { spawnDrop(block.x, block.y, 'gem', res.gems); bits.push('+' + res.gems + ' G'); }
       spawnFloater(block.x, block.y, bits.join(' ') || '+' + BIG.fmt(amount), res.gems ? '#7ad7ff' : '#ffe08a');
@@ -143,7 +143,7 @@
       if (res.energy) { G.overdriveUntil = G.time + 5; spawnFloater(block.x, block.y - 14, 'OVERDRIVE', '#8ef0a8'); }
       if (res.core) clearPlanet();
     } else {
-      spawnFloater(block.x, block.y, BIG.fmt(amount), crit ? '#ff9f43' : '#e8eefc');
+      spawnFloater(block.x, block.y, BIG.fmt(amount) + ' CR', crit ? '#ff9f43' : '#eaf6ff');
       spawnFx(block.x, block.y, block.size * 0.32, CFG.BLOCK[block.type].edge, 0.16);
     }
     return res;
@@ -433,8 +433,18 @@
       ship.orbitAngle += dt * 0.55 * State.speed() * (1 + 0.06 * (State.data.gear.engine - 1));
       ship.x = P.cx + Math.cos(ship.orbitAngle) * (P.radius + 46);
       ship.y = P.cy + Math.sin(ship.orbitAngle) * (P.radius + 46);
+      /* 環繞軌道會被左右邊界裁掉 → 夾回畫面內（視覺上像貼著邊緣滑行） */
+      ship.x = BIG.clamp(ship.x, 40, G.W - 40);
+      ship.y = BIG.clamp(ship.y, 80, G.H - 40);
     }
-    ship.target = Planet.nearestBlocks(P, ship.x, ship.y, 1, 900)[0] || null;
+    /* 鎖定模式：nearest 最近 / weakest 補刀 / richest 肥羊（黃金·核心優先） */
+    const cand = Planet.nearestBlocks(P, ship.x, ship.y, 4, 900);
+    if (!cand.length) ship.target = null;
+    else if (targetMode === 'weakest') ship.target = cand.slice().sort((a, b) => a.hp - b.hp)[0];
+    else if (targetMode === 'richest') {
+      const w = (b) => (b.type === 'core' ? 3 : b.type === 'gold' ? 2 : b.type === 'energy' ? 1.2 : 1);
+      ship.target = cand.slice().sort((a, b) => w(b) - w(a))[0];
+    } else ship.target = cand[0];
   }
 
   function updateBullets(dt) {
@@ -551,11 +561,15 @@
       const half = s / 2;
       c.fillStyle = def.color;
       c.fillRect(b.x - half, b.y - half, s, s);
+      /* 霓虹邊：亮邊 + 輕微光暈（97 顆方塊在 60fps 內還撐得住） */
+      c.save();
+      c.shadowColor = def.edge;
+      c.shadowBlur = b.type === 'core' ? 16 : 6;
       c.strokeStyle = def.edge;
-      c.globalAlpha = 0.55;
-      c.lineWidth = 1;
+      c.globalAlpha = 0.85;
+      c.lineWidth = b.type === 'core' ? 2 : 1.2;
       c.strokeRect(b.x - half, b.y - half, s, s);
-      c.globalAlpha = 1;
+      c.restore();
       /* 血條 */
       const ratio = Math.max(0, b.hp / b.maxHp);
       if (ratio < 1) {
@@ -710,6 +724,7 @@
 
   /* ---------------- 主循環 ---------------- */
   let paused = false;          // 測試用：暫停模擬但仍持續繪製
+  let targetMode = 'nearest';  // nearest / weakest / richest
   function step(now) {
     if (!G.running) return;
     const rawDt = Math.min(0.05, (now - G.lastT) / 1000 || 0.016);
@@ -777,6 +792,9 @@
     get ship() { return G.ship; },
     get fps() { return G.stats.fps; },
     setPaused(v) { paused = !!v; },
+    setTargetMode(m) { targetMode = m; },
+    get targetMode() { return targetMode; },
+    get blockCounts() { return { alive: G.planet ? G.planet.alive : 0, total: G.planet ? G.planet.blocks.length : 0 }; },
     get satPositions() { return G.satPos || []; },
     get satStats() { return G.satStats; },
     satDamage,

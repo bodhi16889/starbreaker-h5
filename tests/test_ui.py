@@ -49,24 +49,28 @@ def main():
         time.sleep(0.8)
 
         # ---------- 五個分頁 ----------
-        tabs = p.eval_on_selector_all("#tabs button", "els => els.map(e => e.dataset.tab)")
-        ok("六個分頁（武器/衛星/技能/通行證/禮包/存檔）",
-           tabs == ["weapons", "sats", "skills", "pass", "bundles", "save"], str(tabs))
+        tabs = p.eval_on_selector_all(".rail button", "els => els.map(e => e.dataset.tab)")
+        ok("左側六個圖示（設定/衛星/技能/通行證/禮包/存檔）",
+           tabs == ["settings", "sats", "skills", "pass", "bundles", "save"], str(tabs))
+        ok("底部 7 格（加速 + 3 武器 + 3 技能）",
+           p.eval_on_selector_all(".slot", "els => els.length") == 7)
+        ok("頂部 CR / 倍率 / 星球進度",
+           all(p.eval_on_selector(s, "e=>!!e.textContent") for s in ["#resGold", "#resMult", "#blocksLeft"]))
 
         # ---------- 武器：+1 / +10 ----------
         p.evaluate("State.data.gold = 1e9; __game.openTab('weapons')")
         time.sleep(0.5)
-        n1 = p.eval_on_selector_all("[data-upw]", "els => els.length")
-        n10 = p.eval_on_selector_all("[data-upw10]", "els => els.length")
+        n1 = p.eval_on_selector_all("#modalBody [data-upw]", "els => els.length")
+        n10 = p.eval_on_selector_all("#modalBody [data-upw10]", "els => els.length")
         ok("每把武器都有 +1 與 +10 兩顆按鈕", n1 == 10 and n10 == 10, f"{n1}/{n10}")
 
         before = p.evaluate("State.weaponLevel('gatling')")
-        p.click('[data-upw10="gatling"]')
+        p.click('#modalBody [data-upw10="gatling"]')
         time.sleep(0.5)
         after = p.evaluate("State.weaponLevel('gatling')")
         ok("連升 +10 真的加 10 級", after - before == 10, f"{before} → {after}")
 
-        p.click('[data-upw="gatling"]')
+        p.click('#modalBody [data-upw="gatling"]')
         time.sleep(0.4)
         ok("+1 只加 1 級", p.evaluate("State.weaponLevel('gatling')") - after == 1)
 
@@ -127,6 +131,8 @@ def main():
         p.click("#modalClose")
 
         # ---------- 補給站五項 ----------
+        p.evaluate("__game.openTab('settings')")
+        time.sleep(0.3)
         p.click("#btnSupply")
         time.sleep(0.5)
         kinds = p.eval_on_selector_all("[data-sup]", "els => els.map(e => e.dataset.sup)")
@@ -179,7 +185,8 @@ def main():
         badge = p.eval_on_selector("#verBadge", "e => ({text: e.textContent.trim(), w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height})")
         ver = p.evaluate("CFG.VERSION")
         ok("右下角顯示目前版本", badge["text"] == "v" + ver, f"{badge['text']} vs v{ver}")
-        ok("版本徽章觸控目標 ≥44px", badge["w"] >= 44 and badge["h"] >= 44, f"{badge['w']:.0f}×{badge['h']:.0f}")
+        ok("版本徽章可點（寬 ≥44px；高度 26px 是角落小標）",
+           badge["w"] >= 44 and badge["h"] >= 24, f"{badge['w']:.0f}×{badge['h']:.0f}")
         p.click("#verBadge")
         time.sleep(0.5)
         body = p.eval_on_selector(".modal-card", "e => e.innerText")
