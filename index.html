@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#05060f" />
+<title>StarBreaker: Unlimited Drill</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <button id="btnSupply" class="supply-btn">💎 <span data-i18n="補給站">補給站</span></button>
+    <div class="res">
+      <span class="chip"><i>🪙</i><b id="resGold">0</b></span>
+      <span class="chip"><i>💎</i><b id="resGems">0</b></span>
+      <span class="chip"><i>✨</i><b id="resPrestige">0</b></span>
+    </div>
+    <button id="btnSpeed" class="speed-btn">×1</button>
+  </header>
+
+  <div id="stage">
+    <canvas id="game"></canvas>
+    <div id="sectorInfo">
+      <span id="sectorLabel">星區 1-1</span>
+      <span id="blocksLeft">0 blocks</span>
+      <span id="fpsLabel">60 fps</span>
+    </div>
+  </div>
+
+  <nav id="tabs">
+    <button data-tab="weapons">🔫<span data-i18n="武器">武器</span></button>
+    <button data-tab="sats">🛰<span data-i18n="衛星">衛星</span></button>
+    <button data-tab="skills">🎲<span data-i18n="技能">技能</span></button>
+    <button data-tab="gear">⚙️<span data-i18n="裝備">裝備</span></button>
+    <button data-tab="pass">🎫<span data-i18n="通行證">通行證</span></button>
+  </nav>
+
+  <div id="modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="modalTitle">Title</h2>
+        <button id="modalClose">✕</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
+</div>
+
+<script src="js/big.js"></script>
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/planet.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
