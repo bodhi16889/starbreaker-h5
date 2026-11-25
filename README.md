@@ -58,6 +58,21 @@ cd ~/work/starbreaker-h5
 - **沒有多語系完整翻譯**：`?lang=en` 只切 UI 標題，武器／技能名稱仍是中文。
 - **沒有雲端存檔**：只有 localStorage（主檔 ＋ `.bak` 備援，壞檔會回退）。
 
+## 存檔備份與跨裝置（v0.4.0）
+
+第六個分頁「💾 存檔」：
+
+| 方式 | 說明 |
+|---|---|
+| 存檔碼 | `SB2.<base64url>.<8碼校驗>`，貼到另一台裝置的「匯入存檔碼」 |
+| 分享連結 | `<網址>#save=SB2.…`，另一台開連結先看預覽再決定載入 |
+| 下載 / 上傳 `.json` | 存到檔案 App、雲端硬碟搬運 |
+| localStorage | 同裝置自動存（每 10 秒 + 離開頁面 + 每次操作） |
+
+- 校驗碼用 FNV-1a：貼到被截斷的字串會直接擋下，不會載入半套進度。
+- 貼到 Vite+TS 版的 `SB1.` 存檔碼會提示「這是另一版的存檔碼，請到 starbreaker-h5-ts 匯入」。
+- 分享連結不會自動載入，一定先問。
+
 ## 怎麼看目前版本
 
 | 位置 | 內容 |
@@ -99,7 +114,8 @@ js/game.js          主循環、飛船、武器、衛星、物件池、canvas �
 js/ui.js            HUD 與彈窗（唯一碰 DOM 的檔案）
 tests/smoke.py      Playwright 22 項（含 640×480、存檔、搖桿、清空推進）
 tests/test_sats.py  Playwright 16 項（Step 3 衛星：軌道半徑、六顆不重疊、五種能力計數、傷害公式）
-tests/test_ui.py    Playwright 31 項（Step 4 介面：五分頁、+1/+10、+5、50 階單階領取、3 禮包、補給站五項、三種螢幕尺寸無溢出）
+tests/test_ui.py    Playwright 31 項
+tests/test_save.py  Playwright 18 項（存檔碼／分享連結／JSON 檔／跨裝置）（Step 4 介面：五分頁、+1/+10、+5、50 階單階領取、3 禮包、補給站五項、三種螢幕尺寸無溢出）
 ```
 
 ## 測試
@@ -108,4 +124,4 @@ tests/test_ui.py    Playwright 31 項（Step 4 介面：五分頁、+1/+10、+5�
 /usr/bin/python3 tests/smoke.py      # 22 項
 ```
 
-目前狀態：**smoke 22 ＋ sats 16 ＋ ui 31 = 69 PASS / 0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。
+目前狀態：**smoke 22 ＋ sats 16 ＋ ui 31 ＋ save 18 = 87 PASS / 0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。

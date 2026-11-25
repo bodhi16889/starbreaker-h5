@@ -50,8 +50,8 @@ def main():
 
         # ---------- 五個分頁 ----------
         tabs = p.eval_on_selector_all("#tabs button", "els => els.map(e => e.dataset.tab)")
-        ok("五個分頁（武器/衛星/技能/通行證/禮包）",
-           tabs == ["weapons", "sats", "skills", "pass", "bundles"], str(tabs))
+        ok("六個分頁（武器/衛星/技能/通行證/禮包/存檔）",
+           tabs == ["weapons", "sats", "skills", "pass", "bundles", "save"], str(tabs))
 
         # ---------- 武器：+1 / +10 ----------
         p.evaluate("State.data.gold = 1e9; __game.openTab('weapons')")

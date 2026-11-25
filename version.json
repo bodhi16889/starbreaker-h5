@@ -1,8 +1,8 @@
 {
   "name": "StarBreaker: Unlimited Drill",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "saveVersion": 1,
-  "commit": "10f34d2",
+  "commit": "046b60e",
   "build": "2026-11-25",
   "url": "https://bodhi16889.github.io/starbreaker-h5/"
 }

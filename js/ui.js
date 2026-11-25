@@ -204,6 +204,98 @@
     bind('bundles');
   }
 
+  /* ---------- 存檔備份（存檔碼 SB2／分享連結／JSON 檔） ---------- */
+  function tabSave() {
+    const s = State.data;
+    const code = State.exportCode();
+    const when = s.lastSave ? new Date(s.lastSave).toLocaleString() : '—';
+    openModal(T('存檔備份'), `
+      <div class="stat-row">
+        <span class="stat">${T('金幣')} <b>${BIG.fmtInt(s.gold)}</b></span>
+        <span class="stat">${T('星區')} <b>${s.sector}-${s.planet}</b></span>
+        <span class="stat">${T('已擊破')} <b>${BIG.fmtInt(s.stats.blocks || 0)}</b></span>
+      </div>
+      <div class="hint">${T('最近寫入')}：${when}（${T('自動存')}）</div>
+      <h3 style="font-size:13px;margin:10px 0 4px">① ${T('存檔碼')}</h3>
+      <textarea id="saveCode" readonly rows="4" style="width:100%;font-size:11px;background:#0a1220;color:#9fc0ff;border:1px solid #24395f;border-radius:8px;padding:8px;font-family:ui-monospace,monospace">${code}</textarea>
+      <button class="btn wide primary" id="btnCopyCode">${T('複製存檔碼')}</button>
+      <button class="btn wide" id="btnCopyLink">${T('複製分享連結')}</button>
+      <button class="btn wide" id="btnDownloadSave">${T('下載存檔檔')}（.json）</button>
+      <h3 style="font-size:13px;margin:14px 0 4px">② ${T('匯入')}</h3>
+      <textarea id="importCode" rows="3" placeholder="SB2.xxxx.yyyy" style="width:100%;font-size:11px;background:#0a1220;color:#e8f1ff;border:1px solid #24395f;border-radius:8px;padding:8px;font-family:ui-monospace,monospace"></textarea>
+      <button class="btn wide gem" id="btnImportCode">${T('匯入存檔碼')}</button>
+      <label class="btn wide" style="display:flex;align-items:center;justify-content:center;cursor:pointer">
+        ${T('匯入存檔檔')}<input id="importFile" type="file" accept=".json,application/json" style="display:none" />
+      </label>
+      <div id="importMsg" class="hint"></div>`);
+
+    const body = $('#modalBody');
+    const copy = (text, label) => {
+      const done = () => toast(label + ' ' + T('已複製'));
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); done(); } catch (e) { toast(T('複製失敗')); }
+          ta.remove();
+        });
+      }
+    };
+    body.querySelector('#btnCopyCode').addEventListener('click', () => copy(code, T('存檔碼')));
+    body.querySelector('#btnCopyLink').addEventListener('click', () => copy(State.shareUrl(), T('分享連結')));
+    body.querySelector('#btnDownloadSave').addEventListener('click', () => { State.downloadSave(); toast(T('已下載')); });
+    const finish = (r) => {
+      const el = body.querySelector('#importMsg');
+      el.textContent = (r.ok ? '✔ ' : '✕ ') + r.msg;
+      el.style.color = r.ok ? '#8ef0a8' : '#ff8a8a';
+      if (r.ok) {
+        global.Game.newPlanet();
+        renderHud();
+        toast(r.msg);
+      } else toast(r.msg);
+    };
+    body.querySelector('#btnImportCode').addEventListener('click', () => {
+      finish(State.importCode(body.querySelector('#importCode').value));
+    });
+    const file = body.querySelector('#importFile');
+    file.addEventListener('change', () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => { finish(State.importFileText(String(reader.result || ''))); file.value = ''; };
+      reader.readAsText(f);
+    });
+  }
+
+  /* 分享連結 #save= → 先問要不要載入 */
+  function confirmImport(code) {
+    const prev = State.previewCode(code);
+    if (!prev.ok || !prev.info) { toast(T('存檔碼無效') + '：' + prev.msg); return; }
+    const i = prev.info;
+    const when = i.ts ? new Date(i.ts).toLocaleString() : '—';
+    openModal(T('偵測到分享的存檔'), `
+      <div class="hint">${T('載入會覆蓋本機進度')}</div>
+      <div class="stat-row">
+        <span class="stat">${T('星區')} <b>${i.sector}-${i.planet}</b></span>
+        <span class="stat">${T('已擊破')} <b>${BIG.fmtInt(i.blocks)}</b></span>
+        <span class="stat">${T('金幣')} <b>${BIG.fmtInt(i.gold)}</b></span>
+      </div>
+      <div class="hint">${when}</div>
+      <button class="btn wide primary" id="btnImportNow">${T('載入這個存檔')}</button>
+      <button class="btn wide" id="btnImportCancel">${T('先不要')}</button>`);
+    const body = $('#modalBody');
+    body.querySelector('#btnImportNow').addEventListener('click', () => {
+      const r = State.importCode(code);
+      toast(r.msg);
+      if (r.ok) { global.Game.newPlanet(); renderHud(); closeModal(); }
+    });
+    body.querySelector('#btnImportCancel').addEventListener('click', () => {
+      if (history.replaceState) history.replaceState(null, '', location.pathname + location.search);
+      closeModal();
+    });
+  }
+
   /* ---------- 補給站（Step 4 五項） ---------- */
   function tabSupply() {
     openModal(T('無限補給'), `
@@ -368,6 +460,7 @@
       else if (t === 'skills') tabSkills();
       else if (t === 'pass') tabPass();
       else if (t === 'bundles') tabBundles();
+      else if (t === 'save') tabSave();
     }));
     $('#btnSupply').addEventListener('click', tabSupply);
     $('#modalClose').addEventListener('click', closeModal);
@@ -387,13 +480,19 @@
 
     renderHud();
     State.on(renderHud);
+
+    if (location.hash.indexOf('#save=') === 0) {
+      const code = decodeURIComponent(location.hash.slice(6));
+      setTimeout(() => confirmImport(code), 400);
+    }
   }
 
   global.UI = { boot, renderHud, toast, openModal, closeModal, tabSupply };
   global.__game = {
     State, Game: global.Game, CFG, BIG,
     get ready() { return true; },
-    openTab: (n) => ({ weapons: tabWeapons, sats: tabSats, skills: tabSkills, pass: tabPass, bundles: tabBundles, supply: tabSupply }[n] || (() => {})()),
+    openTab: (n) => ({ weapons: tabWeapons, sats: tabSats, skills: tabSkills, pass: tabPass, bundles: tabBundles, save: tabSave, supply: tabSupply }[n] || (() => {})()),
+    confirmImport,
   };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

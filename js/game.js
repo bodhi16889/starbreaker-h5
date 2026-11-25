@@ -709,6 +709,7 @@
   }
 
   /* ---------------- 主循環 ---------------- */
+  let paused = false;          // 測試用：暫停模擬但仍持續繪製
   function step(now) {
     if (!G.running) return;
     const rawDt = Math.min(0.05, (now - G.lastT) / 1000 || 0.016);
@@ -722,13 +723,15 @@
       G.stats.fpsAcc = 0; G.stats.fpsN = 0;
     }
 
-    updateShip(rawDt * State.speed());
-    fireAll(dt);
-    tickSatellites(dt);
-    updateBullets(dt);
-    updateBlackholes(dt);
-    updateDrops(dt);
-    updateTimers(dt);
+    if (!paused) {
+      updateShip(rawDt * State.speed());
+      fireAll(dt);
+      tickSatellites(dt);
+      updateBullets(dt);
+      updateBlackholes(dt);
+      updateDrops(dt);
+      updateTimers(dt);
+    }
 
     G.floaters.forEach((f) => {
       if (!f.alive) return;
@@ -773,6 +776,7 @@
     get planet() { return G.planet; },
     get ship() { return G.ship; },
     get fps() { return G.stats.fps; },
+    setPaused(v) { paused = !!v; },
     get satPositions() { return G.satPos || []; },
     get satStats() { return G.satStats; },
     satDamage,

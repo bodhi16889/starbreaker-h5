@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '0.3.1';
+  const VERSION = '0.4.0';
 
   /* ---------- 星球與方塊 ---------- */
   const PLANET = {
@@ -174,6 +174,13 @@
     '版本': 'Version', '存檔版本': 'Save ver', '已擊破': 'Blocks broken',
     '線上版本檔': 'Live version file', '要確認線上是不是最新版': 'To check the live build',
     '星級上限': 'Max stars',
+    '存檔': 'Save', '存檔備份': 'Save backup', '存檔碼': 'Save code', '存檔檔': 'Save file',
+    '複製存檔碼': 'Copy save code', '複製分享連結': 'Copy share link', '分享連結': 'Share link',
+    '下載存檔檔': 'Download save', '匯入': 'Import', '匯入存檔碼': 'Import save code',
+    '匯入存檔檔': 'Import save file', '已複製': 'copied', '複製失敗': 'Copy failed',
+    '已下載': 'downloaded', '最近寫入': 'Last write', '自動存': 'auto-save',
+    '偵測到分享的存檔': 'Shared save detected', '載入會覆蓋本機進度': 'Loading will overwrite this device save.',
+    '載入這個存檔': 'Load this save', '先不要': 'Not now', '存檔碼無效': 'Invalid save code',
   };
 
   function T(zh) { return (global.LANG === 'zh') ? zh : (EN[zh] || zh); }

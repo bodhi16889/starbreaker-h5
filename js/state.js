@@ -86,6 +86,95 @@
     }
   }
 
+  /* ---------- 存檔備份／跨裝置（存檔碼 SB2，與 Vite+TS 版的 SB1 各自獨立） ---------- */
+  function b64encode(str) {
+    const bytes = new TextEncoder().encode(str);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function b64decode(b64) {
+    const norm = b64.replace(/-/g, '+').replace(/_/g, '/');
+    const bin = atob(norm + '==='.slice((norm.length + 3) % 4));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder().decode(bytes);
+  }
+  function fnv1a(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 0x01000193) >>> 0;
+    }
+    return (h >>> 0).toString(16).padStart(8, '0');
+  }
+
+  function exportCode() {
+    const payload = JSON.stringify({ ts: Date.now(), app: 'sb-h5', d: S });
+    return 'SB2.' + b64encode(payload) + '.' + fnv1a(payload);
+  }
+
+  function decodeCode(code) {
+    const raw = String(code || '').trim().replace(/\s+/g, '');
+    if (!raw) return { ok: false, msg: '請先貼上存檔碼' };
+    if (/^SB1\./.test(raw)) return { ok: false, msg: '這是 Vite+TS 版的存檔碼，請到 starbreaker-h5-ts 匯入' };
+    const parts = raw.split('.');
+    if (parts.length !== 3 || parts[0] !== 'SB2') return { ok: false, msg: '存檔碼格式不對（要 SB2.xxx.yyyy）' };
+    let payload;
+    try { payload = b64decode(parts[1]); } catch (e) { return { ok: false, msg: '存檔碼解不開（可能被截斷）' }; }
+    if (fnv1a(payload) !== parts[2]) return { ok: false, msg: '存檔碼校驗失敗（複製不完整）' };
+    let parsed;
+    try { parsed = JSON.parse(payload); } catch (e) { return { ok: false, msg: '存檔內容不是 JSON' }; }
+    const d = parsed && parsed.d;
+    if (!d || typeof d !== 'object') return { ok: false, msg: '存檔內容缺少資料' };
+    if ((d.v | 0) > SAVE_VERSION) return { ok: false, msg: '存檔版本較新（v' + d.v + '），請重新整理更新' };
+    return { ok: true, ts: Number(parsed.ts) || 0, d };
+  }
+
+  function previewCode(code) {
+    const r = decodeCode(code);
+    if (!r.ok) return r;
+    const d = normalize(r.d);
+    return { ok: true, info: { sector: d.sector, planet: d.planet, blocks: d.stats.blocks | 0, gold: d.gold, ts: r.ts } };
+  }
+
+  function importCode(code) {
+    const r = decodeCode(code);
+    if (!r.ok) return r;
+    S = normalize(r.d);
+    save();
+    emit();
+    return { ok: true, msg: '已載入：星區 ' + S.sector + '-' + S.planet + ' · 擊破 ' + (S.stats.blocks | 0) };
+  }
+
+  function importFileText(text) {
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (e) { return { ok: false, msg: '檔案不是 JSON' }; }
+    const d = (parsed && parsed.d) || parsed;
+    if (!d || typeof d !== 'object' || !d.v) return { ok: false, msg: '檔案裡沒有存檔資料' };
+    S = normalize(d);
+    save();
+    emit();
+    return { ok: true, msg: '已載入：星區 ' + S.sector + '-' + S.planet + ' · 擊破 ' + (S.stats.blocks | 0) };
+  }
+
+  function shareUrl() {
+    return location.origin + location.pathname + location.search + '#save=' + encodeURIComponent(exportCode());
+  }
+
+  function downloadSave() {
+    const payload = JSON.stringify({ name: 'StarBreaker: Unlimited Drill', ts: Date.now(), d: S }, null, 2);
+    const blob = new Blob([payload], { type: 'application/json' });
+    const a = document.createElement('a');
+    const t = new Date();
+    const p2 = (n) => String(n).padStart(2, '0');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'starbreaker-save-' + t.getFullYear() + p2(t.getMonth() + 1) + p2(t.getDate())
+      + '-' + p2(t.getHours()) + p2(t.getMinutes()) + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
   /* ---------- 衍生數值 ---------- */
   function gearBonus(id) { return 1 + CFG.GEAR.find((g) => g.id === id).per * (S.gear[id] - 1); }
 
@@ -376,6 +465,7 @@
     gearCost, upgradeGear, toggleEquip,
     rollDice, fuseAll,
     supply, passClaim, passClaimAll, bundleClaim,
+    exportCode, importCode, previewCode, shareUrl, downloadSave, importFileText,
     prestigeGain, doPrestige,
     onPlanetCleared, onBlockBroken,
   };
