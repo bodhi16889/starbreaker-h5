@@ -256,6 +256,7 @@
     };
     canvas.addEventListener('pointerdown', (e) => {
       dragging = true;
+      lastType = e.pointerType || 'mouse';
       const p = pos(e);
       global.Game.joyDown(p.x, p.y);
       canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
@@ -265,10 +266,13 @@
       const p = pos(e);
       global.Game.joyMove(p.x, p.y);
     });
+    let lastType = 'mouse';
     const end = () => { if (dragging) { dragging = false; global.Game.joyUp(); } };
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointercancel', end);
-    canvas.addEventListener('pointerleave', end);
+    /* 觸控拖曳在部分裝置/瀏覽器會先噴 pointerleave，若照樣收線會讓搖桿中途消失
+       （飛船突然彈回軌道）→ 只讓滑鼠用 pointerleave 收線。 */
+    canvas.addEventListener('pointerleave', (e) => { if ((e.pointerType || lastType) === 'mouse') end(); });
   }
 
   /* ---------- 啟動 ---------- */

@@ -2,7 +2,13 @@
 
 太空放置採礦 × 彈幕射擊 × 技能融合。**零建置純前端**：`index.html` ＋ `css/` ＋ `js/`，沒有 npm、沒有打包，任何靜態伺服器或 `file://` 都能跑。
 
-## 怎麼跑
+## 線上版（已發佈）
+
+**https://bodhi16889.github.io/starbreaker-h5/**
+
+手機直接開，加到主畫面就像 App。`?lang=en` 切英文。
+
+## 怎麼跑（本機
 
 ```bash
 cd ~/work/starbreaker-h5
@@ -51,6 +57,11 @@ cd ~/work/starbreaker-h5
 - **沒有原生打包**（這是 H5；要上 App Store／Google Play 需要另外包 Capacitor 或重寫原生）。
 - **沒有多語系完整翻譯**：`?lang=en` 只切 UI 標題，武器／技能名稱仍是中文。
 - **沒有雲端存檔**：只有 localStorage（主檔 ＋ `.bak` 備援，壞檔會回退）。
+
+## 已知的觸控細節
+
+`#game` 必須 `touch-action: none`，否則手機會把拖曳當成頁面捲動、中途發 `pointercancel`，
+搖桿會消失、飛船彈回軌道（實測 CDP touch 事件才抓得到，滑鼠完全正常）。
 
 ## 專案結構
 
