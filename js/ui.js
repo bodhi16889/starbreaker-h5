@@ -21,6 +21,25 @@
     const spBtn = $('#btnSpeed');
     spBtn.textContent = '×' + sp;
     spBtn.classList.toggle('on', sp > 1);
+    const vb = $('#verBadge');
+    if (vb) vb.textContent = 'v' + CFG.VERSION;
+  }
+
+  /* ---------- 版本資訊（右下徽章點開） ---------- */
+  function showVersion() {
+    const s = State.data;
+    openModal('版本資訊', `
+      <div class="row"><div class="grow"><div class="name">StarBreaker: Unlimited Drill</div>
+        <div class="sub">${T('版本')} <b style="color:#9fc0ff">v${CFG.VERSION}</b></div></div></div>
+      <div class="stat-row">
+        <span class="stat">${T('武器')} <b>${CFG.WEAPONS.length}</b></span>
+        <span class="stat">${T('衛星')} <b>${CFG.SATELLITES.length}</b></span>
+        <span class="stat">${T('通行證')} <b>${CFG.PASS_TIERS.length}</b></span>
+        <span class="stat">${T('星級上限')} <b>5★</b></span>
+      </div>
+      <div class="hint">${T('存檔版本')} v${s.v} ｜ ${T('星區')} ${s.sector}-${s.planet} ｜ ${T('已擊破')} ${BIG.fmtInt(s.stats.blocks || 0)}</div>
+      <div class="hint">${T('線上版本檔')}：<a href="version.json" target="_blank" rel="noopener" style="color:#8ef0a8">version.json</a></div>
+      <div class="hint" style="color:#7d8aa8">${T('要確認線上是不是最新版')}：重新整理後看右下角徽章，或開 version.json。</div>`);
   }
 
   /* ---------- toast ---------- */
@@ -353,6 +372,7 @@
     $('#btnSupply').addEventListener('click', tabSupply);
     $('#modalClose').addEventListener('click', closeModal);
     $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
+    if ($('#verBadge')) $('#verBadge').addEventListener('click', showVersion);
     $('#btnSpeed').addEventListener('click', () => {
       const next = State.speed() === 1 ? 2 : State.speed() === 2 ? 3 : 1;
       State.data.settings.speed = next;

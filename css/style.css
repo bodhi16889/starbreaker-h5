@@ -66,6 +66,25 @@ html, body {
 /* ---------- 舞台 ---------- */
 #stage { position: relative; flex: 1 1 auto; min-height: 0; }
 #game { display: block; width: 100%; height: 100%; touch-action: none; }   /* 搖桿用；不要讓瀏覽器把手勢當捲動 */
+.ver-badge {
+  position: absolute;
+  right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid rgba(120, 170, 255, .35);
+  border-radius: 10px;
+  background: rgba(8, 12, 24, .72);
+  color: #9fc0ff;
+  font-size: 12px;
+  font-family: inherit;
+  letter-spacing: .3px;
+  z-index: 20;   /* 低於 .modal(30)：彈窗打開時徽章不會壓在彈窗上 */
+  cursor: pointer;
+}
+.ver-badge:active { background: rgba(40, 70, 130, .8); }
+
 #sectorInfo {
   position: absolute; left: 8px; bottom: 6px;
   display: flex; gap: 8px;

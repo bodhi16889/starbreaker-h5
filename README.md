@@ -58,6 +58,16 @@ cd ~/work/starbreaker-h5
 - **沒有多語系完整翻譯**：`?lang=en` 只切 UI 標題，武器／技能名稱仍是中文。
 - **沒有雲端存檔**：只有 localStorage（主檔 ＋ `.bak` 備援，壞檔會回退）。
 
+## 怎麼看目前版本
+
+| 位置 | 內容 |
+|---|---|
+| 遊戲畫面右下角徽章 | `v0.3.1`（≥44px 可點） |
+| 點徽章 | 版本資訊彈窗：版本／存檔版本／武器·衛星·通行證數量／星區／已擊破 |
+| `version.json` | https://bodhi16889.github.io/starbreaker-h5/version.json（name／version／saveVersion／commit／build） |
+
+徽章文字由 `CFG.VERSION` 直接渲染，不會和實際程式不同步；`version.json` 每次發版一起改。
+
 ## Step 3 移植時修掉的設計問題
 
 原 GDScript 的雷射衛星是「飛船 ↔ 衛星」連線切割，但兩者都在星球外側，
@@ -89,7 +99,7 @@ js/game.js          主循環、飛船、武器、衛星、物件池、canvas �
 js/ui.js            HUD 與彈窗（唯一碰 DOM 的檔案）
 tests/smoke.py      Playwright 22 項（含 640×480、存檔、搖桿、清空推進）
 tests/test_sats.py  Playwright 16 項（Step 3 衛星：軌道半徑、六顆不重疊、五種能力計數、傷害公式）
-tests/test_ui.py    Playwright 26 項（Step 4 介面：五分頁、+1/+10、+5、50 階單階領取、3 禮包、補給站五項、三種螢幕尺寸無溢出）
+tests/test_ui.py    Playwright 31 項（Step 4 介面：五分頁、+1/+10、+5、50 階單階領取、3 禮包、補給站五項、三種螢幕尺寸無溢出）
 ```
 
 ## 測試
@@ -98,4 +108,4 @@ tests/test_ui.py    Playwright 26 項（Step 4 介面：五分頁、+1/+10、+5�
 /usr/bin/python3 tests/smoke.py      # 22 項
 ```
 
-目前狀態：**smoke 22 ＋ sats 16 ＋ ui 26 = 64 PASS / 0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。
+目前狀態：**smoke 22 ＋ sats 16 ＋ ui 31 = 69 PASS / 0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。

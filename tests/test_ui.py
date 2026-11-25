@@ -173,6 +173,23 @@ def main():
         ok("融合後總數下降（3 合 1 生效）", fused["n"] < pre, f"{pre} → {fused['n']}")
         p.click("#modalClose")
 
+        # ---------- 版本徽章（右下角，可點開版本資訊） ----------
+        p.set_viewport_size({"width": 390, "height": 844})
+        time.sleep(0.3)
+        badge = p.eval_on_selector("#verBadge", "e => ({text: e.textContent.trim(), w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height})")
+        ver = p.evaluate("CFG.VERSION")
+        ok("右下角顯示目前版本", badge["text"] == "v" + ver, f"{badge['text']} vs v{ver}")
+        ok("版本徽章觸控目標 ≥44px", badge["w"] >= 44 and badge["h"] >= 44, f"{badge['w']:.0f}×{badge['h']:.0f}")
+        p.click("#verBadge")
+        time.sleep(0.5)
+        body = p.eval_on_selector(".modal-card", "e => e.innerText")
+        ok("點徽章可看到版本資訊", (ver in body) and ("版本" in body or "Version" in body), body.replace("\n", " | ")[:80])
+        ok("版本彈窗列出武器/衛星/通行證數",
+           all(k in body for k in ["10", "6", "50"]), body.replace("\n", " | ")[:80])
+        p.click("#modalClose")
+        time.sleep(0.3)
+        ok("有 version.json 可直接查線上版本", os.path.exists(os.path.join(ROOT, "version.json")))
+
         # ---------- SafeArea / 無橫向溢出 ----------
         for w, h in [(390, 844), (360, 640), (320, 568)]:
             p.set_viewport_size({"width": w, "height": h})

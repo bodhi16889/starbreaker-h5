@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '0.3.0';
+  const VERSION = '0.3.1';
 
   /* ---------- 星球與方塊 ---------- */
   const PLANET = {
@@ -171,6 +171,9 @@
     '全 6 顆衛星解鎖並升至滿星': 'Unlock all 6 satellites (max)',
     '一鍵拉滿所有資源與等級': 'All-in-one: max everything',
     '立即提升倍率': 'raises multiplier now', '第': 'Tier', '階': '',
+    '版本': 'Version', '存檔版本': 'Save ver', '已擊破': 'Blocks broken',
+    '線上版本檔': 'Live version file', '要確認線上是不是最新版': 'To check the live build',
+    '星級上限': 'Max stars',
   };
 
   function T(zh) { return (global.LANG === 'zh') ? zh : (EN[zh] || zh); }
