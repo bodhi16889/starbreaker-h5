@@ -192,6 +192,16 @@
     if (S.gems < cost) return { ok: false, msg: '寶石不足' };
     S.gems -= cost; S.satellites[id] = satLevel(id) + 1; emit(); return { ok: true };
   }
+  function upgradeSatelliteBulk(id, times) {
+    let n = 0;
+    for (let i = 0; i < (times || 5); i++) {
+      if (satLevel(id) >= 5) break;
+      const r = upgradeSatellite(id);
+      if (!r.ok) break;
+      n++;
+    }
+    return n;
+  }
   function unlockAllSatellites() {
     CFG.SATELLITES.forEach((s) => { S.satellites[s.id] = Math.max(5, satLevel(s.id)); });
     emit();
@@ -275,14 +285,25 @@
   }
 
   /* ---------- 動作：補給站 / 通行證 / 禮包 ---------- */
+  /* 補給站：gems / prestige / weapons_unlock_all / satellites_max / all_in_one */
   function supply(kind) {
     if (kind === 'gems') S.gems += CFG.SUPPLY.gems;
-    else if (kind === 'prestige') S.prestige += CFG.SUPPLY.prestige;
-    else if (kind === 'ticket') S.gems += 0, unlockDice();
-    else if (kind === 'sats') unlockAllSatellites();
-    else if (kind === 'all') {
-      S.gems += CFG.SUPPLY.gems; S.prestige += CFG.SUPPLY.prestige; S.scrap += CFG.SUPPLY.scrap;
+    else if (kind === 'prestige') {
+      S.prestige += CFG.SUPPLY.prestige;
+      S.prestigeMult = 1 + Math.log10(1 + S.prestige) * 0.8;   // 立即提升倍率
+    } else if (kind === 'weapons_unlock_all') {
+      CFG.WEAPONS.forEach((w) => { S.weapons[w.id] = Math.max(CFG.SUPPLY.weaponLevels, S.weapons[w.id] | 0); });
+    } else if (kind === 'satellites_max') {
       unlockAllSatellites();
+    } else if (kind === 'all_in_one') {
+      S.gems += CFG.SUPPLY.gems;
+      S.prestige += CFG.SUPPLY.prestige;
+      S.scrap += CFG.SUPPLY.scrap;
+      S.gold += 1e8;
+      S.prestigeMult = 1 + Math.log10(1 + S.prestige) * 0.8;
+      CFG.WEAPONS.forEach((w) => { S.weapons[w.id] = Math.max(25, S.weapons[w.id] | 0); });
+      unlockAllSatellites();
+      CFG.GEAR.forEach((g) => { S.gear[g.id] = Math.max(25, S.gear[g.id]); });
     }
     emit();
     return { ok: true };
@@ -308,7 +329,10 @@
     if (!b || S.bundles[id]) return { ok: false };
     S.bundles[id] = true;
     S.gems += b.gems; S.prestige += b.prestige; S.scrap += b.scrap;
-    S.gems += b.ticket * 25;
+    S.gems += (b.ticket || 0) * 25;
+    if (b.gold) S.gold += b.gold;
+    if (b.weaponLevels) CFG.WEAPONS.forEach((w) => { S.weapons[w.id] = (S.weapons[w.id] | 0) + b.weaponLevels; });
+    if (b.satLevels) CFG.SATELLITES.forEach((x) => { S.satellites[x.id] = Math.max(b.satLevels, S.satellites[x.id] | 0); });
     emit();
     return { ok: true };
   }
@@ -348,7 +372,7 @@
     atk, attackSpeed, critChance, critMult, coinMul, collectRadius, bombChance, chainRadius,
     skillTotals, skillList, gearBonus, power, speed, prestigeMult: () => S.prestigeMult,
     weaponLevel, weaponCost, upgradeWeapon, upgradeAllWeapons,
-    satLevel, satCost, upgradeSatellite, unlockAllSatellites,
+    satLevel, satCost, upgradeSatellite, upgradeSatelliteBulk, unlockAllSatellites,
     gearCost, upgradeGear, toggleEquip,
     rollDice, fuseAll,
     supply, passClaim, passClaimAll, bundleClaim,

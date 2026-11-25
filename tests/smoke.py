@@ -96,7 +96,7 @@ def main():
         time.sleep(0.3)
         page.click('[data-sup="prestige"]')
         time.sleep(0.3)
-        page.click('[data-sup="sats"]')
+        page.click('[data-sup="satellites_max"]')
         time.sleep(0.3)
         sup = page.evaluate("""(() => ({
             gems: State.data.gems, prestige: State.data.prestige,
@@ -119,10 +119,12 @@ def main():
         }))()""")
         ok("通行證 50 階可一鍵全領", pass_info["claimed"] == 50, str(pass_info["claimed"]))
 
-        page.click('[data-bundle="vip"]')
+        page.evaluate("__game.openTab('bundles')")
+        time.sleep(0.4)
+        page.click('[data-bundle="starter_pack"]')
         time.sleep(0.3)
-        bundle = page.evaluate("({vip: !!State.data.bundles.vip, mul: State.data.bundles.vip})")
-        ok("禮包免費領取（vip 已解鎖）", bundle["vip"] is True, json.dumps(bundle))
+        bundle = page.evaluate("({got: !!State.data.bundles.starter_pack, gold: State.data.gold})")
+        ok("禮包免費領取（starter_pack 已解鎖）", bundle["got"] is True, json.dumps(bundle))
         page.click("#modalClose")
         time.sleep(0.2)
 

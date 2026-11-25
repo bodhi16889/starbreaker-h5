@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '0.2.0';
+  const VERSION = '0.3.0';
 
   /* ---------- 星球與方塊 ---------- */
   const PLANET = {
@@ -112,8 +112,8 @@
       const big = i % 10 === 0;
       out.push({
         tier: i,
-        gems: Math.round(120 * Math.pow(1.14, i) * (big ? 6 : 1)),
-        prestige: big ? 250 * (i / 10) : 0,
+        gems: Math.round(50000 * i * (big ? 2 : 1)),   // Step 4：50,000 × 階
+        prestige: 10000 * i,                            // Step 4：10,000 × 階
         ticket: big ? 20 : 2,
         scrap: Math.round(60 * Math.pow(1.1, i)),
       });
@@ -122,15 +122,19 @@
   })();
 
   /* ---------- 禮包（全部 FREE） ---------- */
+  /* 特惠禮包：照 Step 4 的三個（全部 FREE，領取即發） */
   const BUNDLES = [
-    { id: 'starter', name: '新手啟航包',   gems: 5e5,  prestige: 2e4,  scrap: 5e4,  ticket: 100, mul: { damage: 1.5 } },
-    { id: 'drill',   name: '無限鑽探禮包', gems: 2e6,  prestige: 1e5,  scrap: 3e5,  ticket: 300, mul: { coin: 2.0 } },
-    { id: 'arsenal', name: '全武器解鎖包', gems: 3e6,  prestige: 2e5,  scrap: 6e5,  ticket: 500, mul: { damage: 2.0 } },
-    { id: 'vip',     name: '永久免廣告 + 3 倍速', gems: 1e7, prestige: 1e6, scrap: 1e6, ticket: 1000, mul: { speed: 3, noAds: 1 } },
+    { id: 'starter_pack',        name: '🎁 新手啟航至尊禮包', gems: 5e5, prestige: 1e4, scrap: 5e4, ticket: 100,
+      gold: 1e7, mul: { damage: 1.5 } },
+    { id: 'unlimited_drill_pack', name: '⚔️ 全武器精通禮包', gems: 1e6, prestige: 5e4, scrap: 3e5, ticket: 200,
+      weaponLevels: 25, mul: { coin: 1.6 } },
+    { id: 'all_satellites_pack', name: '🛰️ 衛星艦隊滿編禮包', gems: 1.5e6, prestige: 8e4, scrap: 5e5, ticket: 300,
+      satLevels: 5, mul: { damage: 1.3 } },
   ];
 
   /* ---------- 補給站（可無限點） ---------- */
-  const SUPPLY = { gems: 1e6, prestige: 1e6, ticket: 100, scrap: 1e6 };
+  /* 補給站：Step 4 的五個項目（全部免費、無冷卻） */
+  const SUPPLY = { gems: 1e6, prestige: 1e6, ticket: 100, scrap: 1e6, weaponLevels: 10 };
 
   /* ---------- 平衡 ---------- */
   const BALANCE = {
@@ -161,6 +165,12 @@
     '免費百連券': '+100 dice tickets', '轉生': 'Prestige', '永久加成': 'Permanent bonus',
     '戰力': 'Power', '暴擊': 'Crit', '攻速': 'Atk spd', '採集': 'Collect', '爆炸': 'Chain',
     '本星球剩餘': 'Blocks left', '星球': 'Planet', '速度': 'Speed',
+    '禮包': 'Bundles', '待領取': 'Pending', '已領取': 'Claimed', '領取': 'Claim',
+    '一鍵領取全部 50 階獎勵': 'Claim all 50 tiers',
+    '全 10 種武器立即解鎖': 'Unlock all 10 weapons',
+    '全 6 顆衛星解鎖並升至滿星': 'Unlock all 6 satellites (max)',
+    '一鍵拉滿所有資源與等級': 'All-in-one: max everything',
+    '立即提升倍率': 'raises multiplier now', '第': 'Tier', '階': '',
   };
 
   function T(zh) { return (global.LANG === 'zh') ? zh : (EN[zh] || zh); }

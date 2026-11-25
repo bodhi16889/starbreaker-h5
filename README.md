@@ -64,6 +64,13 @@ cd ~/work/starbreaker-h5
 線段永遠不會碰到方塊（H5 實測切割次數 0）。改成「衛星 ↔ 目標」延伸光束（穿過目標再往前 60px），
 飛船↔衛星那條只留細線當視覺連結。
 
+## Step 4 移植時修掉的兩個問題
+
+1. **傷害數字會蓋滿整個星球**：六衛星 + 十武器同時打，一次噴上百個 `+399`，整片星球看不到。
+   加 `FLOATER_MAX = 18`，超過上限就把新數字併進現有數字（合併後用大數格式）。
+2. **領完禮包/升完裝備會跳到錯的分頁**：`tabGear()` 已併進武器頁、禮包卻呼叫 `tabPass()`，
+   按鈕看起來有反應但畫面跳走。改 `tabWeapons()` / `tabBundles()`。
+
 ## 已知的觸控細節
 
 `#game` 必須 `touch-action: none`，否則手機會把拖曳當成頁面捲動、中途發 `pointercancel`，
@@ -82,6 +89,7 @@ js/game.js          主循環、飛船、武器、衛星、物件池、canvas �
 js/ui.js            HUD 與彈窗（唯一碰 DOM 的檔案）
 tests/smoke.py      Playwright 22 項（含 640×480、存檔、搖桿、清空推進）
 tests/test_sats.py  Playwright 16 項（Step 3 衛星：軌道半徑、六顆不重疊、五種能力計數、傷害公式）
+tests/test_ui.py    Playwright 26 項（Step 4 介面：五分頁、+1/+10、+5、50 階單階領取、3 禮包、補給站五項、三種螢幕尺寸無溢出）
 ```
 
 ## 測試
@@ -90,4 +98,4 @@ tests/test_sats.py  Playwright 16 項（Step 3 衛星：軌道半徑、六顆不
 /usr/bin/python3 tests/smoke.py      # 22 項
 ```
 
-目前狀態：**smoke 22 PASS ＋ sats 16 PASS，0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。
+目前狀態：**smoke 22 ＋ sats 16 ＋ ui 26 = 64 PASS / 0 FAIL**。實測 390×844 約 95–106 fps（headless swiftshader，實際手機更高）。

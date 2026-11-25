@@ -50,7 +50,18 @@
     p.r = kind === 'missile' ? 3 : 2.4;
   }
 
+  /* 傷害數字上限：六衛星 + 十武器同時打會一次噴出上百個數字，
+     實測整片星球被文字蓋住。超過上限就找人最多的位置疊加，不新增。 */
+  const FLOATER_MAX = 18;
   function spawnFloater(x, y, text, color) {
+    const alive = G.floaters.filter((f) => f.alive);
+    if (alive.length >= FLOATER_MAX) {
+      const f0 = alive[(Math.random() * alive.length) | 0];
+      const n0 = parseFloat(String(f0.text).replace(/[^\d.]/g, ''));
+      const n1 = parseFloat(String(text).replace(/[^\d.]/g, ''));
+      if (isFinite(n0) && isFinite(n1)) f0.text = '+' + BIG.fmt(n0 + n1);
+      return;
+    }
     const f = take(G.floaters, 'floaterCursor');
     if (!f) return;
     f.x = x; f.y = y; f.text = text; f.color = color || '#ffe08a';
