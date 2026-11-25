@@ -13,6 +13,8 @@
     joystick: { active: false, bx: 0, by: 0, x: 0, y: 0, releaseAt: 0 },
     laserTarget: null, laserRamp: 0,
     overdriveUntil: 0, chronoUntil: 0, chronoNext: 0,
+    satAngles: {}, satTimers: {}, beamTick: 0, satSpin: 0,
+    satStats: { collectorGold: 0, collectorGems: 0, bomber: 0, beam: 0, mirror: 0, ring: 0 },
     pendingClear: 0, planetIndex: 0,
     stats: { dpsSample: 0, dmgWindow: 0, dmgWindowAt: 0, fps: 60, fpsAcc: 0, fpsN: 0 },
   };
@@ -66,7 +68,23 @@
   function spawnFx(x, y, r, color, life) {
     const fx = take(G.fx, 'fxCursor');
     if (!fx) return;
-    fx.x = x; fx.y = y; fx.r = r; fx.color = color; fx.life = life || 0.35; fx.max = fx.life;
+    fx.kind = 'ring'; fx.x = x; fx.y = y; fx.r = r; fx.color = color;
+    fx.life = life || 0.35; fx.max = fx.life;
+  }
+
+  /* 衛星用的淡出連線與固定半徑環 */
+  function spawnLine(x1, y1, x2, y2, color, life) {
+    const fx = take(G.fx, 'fxCursor');
+    if (!fx) return;
+    fx.kind = 'line'; fx.x1 = x1; fx.y1 = y1; fx.x2 = x2; fx.y2 = y2;
+    fx.color = color; fx.life = life || 0.12; fx.max = fx.life;
+  }
+
+  function spawnRing(x, y, r, color, life) {
+    const fx = take(G.fx, 'fxCursor');
+    if (!fx) return;
+    fx.kind = 'ring-fixed'; fx.x = x; fx.y = y; fx.r = r; fx.color = color;
+    fx.life = life || 0.25; fx.max = fx.life;
   }
 
   /* ---------------- 初始化 / 換星球 ---------------- */
@@ -88,6 +106,8 @@
     G.ship.orbitAngle = -Math.PI / 2;
     G.ship.cd = {};
     G.overdriveUntil = 0;
+    Object.keys(SAT_TIMERS).forEach((k) => { SAT_TIMERS[k] = 0; });
+    G.beamTick = 0;
   }
 
   /* ---------------- 傷害與掉落 ---------------- */
@@ -248,42 +268,127 @@
     });
   }
 
-  /* ---------------- 衛星 ---------------- */
-  function satPositions() {
-    const out = [];
-    const list = CFG.SATELLITES.filter((s) => (State.data.satellites[s.id] | 0) > 0);
-    list.forEach((s, i) => {
-      const a = G.time * 0.9 + (Math.PI * 2 / Math.max(1, list.length)) * i;
-      out.push({ s, x: G.ship.x + Math.cos(a) * 74, y: G.ship.y + Math.sin(a) * 74, a });
-    });
-    return out;
+  /* ---------------- 衛星（Step 3：6 顆各自軌道、各自能力） ---------------- */
+  const SAT_TIMERS = {};
+  function satList() {
+    return CFG.SATELLITES.filter((x) => (State.data.satellites[x.id] | 0) > 0);
+  }
+
+  /* 初始角度均勻錯開，避免六顆疊在同一點 */
+  function satAngleFor(id) {
+    if (G.satAngles[id] === undefined) {
+      const all = CFG.SATELLITES;
+      G.satAngles[id] = (all.findIndex((x) => x.id === id) / all.length) * Math.PI * 2;
+    }
+    return G.satAngles[id];
+  }
+
+  /* Step 3 的傷害公式 */
+  function satDamage(lv, mult) {
+    const sector = Math.max(1, State.data.sector | 0);
+    return mult * Math.pow(CFG.SAT.dmgGrow, Math.max(0, lv - 1)) * CFG.SAT.dmgBase
+      * State.prestigeMult() * Math.pow(CFG.SAT.sectorGrow, sector - 1);
+  }
+
+  function satTimer(id, dt) {
+    if (SAT_TIMERS[id] === undefined) SAT_TIMERS[id] = 0;
+    SAT_TIMERS[id] -= dt;
+    return SAT_TIMERS[id] <= 0;
   }
 
   function tickSatellites(dt) {
-    const sats = satPositions();
-    G.satPos = sats;
-    sats.forEach(({ s, x, y }) => {
-      const lv = State.satLevel(s.id) || 1;
-      if (s.id === 'bomber') {
-        if (!G.bomberAt) G.bomberAt = 0;
-        if (G.time > G.bomberAt) {
-          G.bomberAt = G.time + Math.max(1.1, 3.0 - lv * 0.3);
-          const t = Planet.randomAlive(G.planet);
-          if (t) splash(t.x, t.y, 70 + lv * 6, State.atk() * 2.4 * lv);
+    const sats = satList();
+    G.satPos = [];
+    if (!sats.length) { G.beamSeg = null; return; }
+    const ship = G.ship;
+    const target = ship.target;
+    const rateMult = State.attackSpeed() * (G.overdriveUntil > G.time ? 2 : 1) * (G.chronoUntil > G.time ? 3 : 1);
+    G.satSpin += dt * 3;
+
+    sats.forEach((st) => {
+      const lv = State.satLevel(st.id) || 1;
+      const a = satAngleFor(st.id) + G.satAngles[st.id] * 0;   // 保底
+      G.satAngles[st.id] += st.speed * dt;
+      const ang = G.satAngles[st.id];
+      const x = ship.x + Math.cos(ang) * st.radius;
+      const y = ship.y + Math.sin(ang) * st.radius;
+      G.satPos.push({ s: st, x, y, lv, ang });
+
+      if (!target) return;
+
+      if (st.id === 'collector') {
+        if (satTimer('collector', dt)) {
+          SAT_TIMERS.collector = Math.max(CFG.SAT.collector.minInterval, CFG.SAT.collector.interval - lv * CFG.SAT.collector.perLv);
+          spawnLine(x, y, target.x, target.y, st.color, 0.12);
+          const bonus = CFG.SAT.collector.gold * lv * (State.data.planet | 0) * State.prestigeMult()
+            * Math.pow(CFG.SAT.sectorGrow, (State.data.sector | 0) - 1);
+          State.data.gold += Math.round(bonus);
+          G.satStats.collectorGold += Math.round(bonus);
+          spawnFloater(x, y, '+' + BIG.fmt(Math.round(bonus)), st.color);
+          if (Math.random() < CFG.SAT.collector.gemChance) {
+            State.data.gems += 1 + Math.floor(lv / 10);
+            G.satStats.collectorGems++;
+          }
         }
-      } else if (s.id === 'beam') {
-        const line = G.planet.blocks.filter((b) => b.alive && pointSegDist(b.x, b.y, G.ship.x, G.ship.y, x, y) < 22);
-        line.forEach((b) => { if ((b._beamAt || 0) < G.time) { b._beamAt = G.time + 0.2; hit(b, State.atk() * 0.5 * lv); } });
-      } else if (s.id === 'chrono') {
-        if (G.time > (G.chronoNext || 0)) {
-          G.chronoNext = G.time + 9;
-          G.chronoUntil = G.time + 4;
-          spawnFloater(G.ship.x, G.ship.y - 40, 'CHRONO ×3', s.color);
+      } else if (st.id === 'bomber') {
+        if (satTimer('bomber', dt * rateMult)) {
+          SAT_TIMERS.bomber = Math.max(CFG.SAT.bomber.minInterval, CFG.SAT.bomber.interval - lv * CFG.SAT.bomber.perLv);
+          const dmg = satDamage(lv, CFG.SAT.bomber.dmgMult);
+          spawnLine(x, y, target.x, target.y, st.color, 0.14);
+          spawnRing(target.x, target.y, CFG.SAT.bomber.radius, st.color, 0.3);
+          splash(target.x, target.y, CFG.SAT.bomber.radius, dmg);
+          G.satStats.bomber++;
+        }
+      } else if (st.id === 'mirror') {
+        if (satTimer('mirror', dt * rateMult)) {
+          SAT_TIMERS.mirror = CFG.SAT.mirror.interval;
+          const ratio = Math.min(1, CFG.SAT.mirror.ratioBase + lv * CFG.SAT.mirror.ratioPerLv);
+          const dmg = satDamage(lv, CFG.SAT.mirror.dmgMult) * ratio;
+          spawnLine(x, y, target.x, target.y, st.color, 0.07);
+          hit(target, dmg);
+          G.satStats.mirror++;
+        }
+      } else if (st.id === 'chrono' || st.id === 'crit') {
+        if (satTimer(st.id, dt)) {
+          SAT_TIMERS[st.id] = CFG.SAT.ring.interval;
+          spawnRing(x, y, CFG.SAT.ring.radius, st.color, 0.22);
+          G.satStats.ring++;
         }
       }
     });
+
+    /* 雷射衛星：衛星與飛船之間的連線，再往目標方向延伸成切割光束。
+       只連「飛船↔衛星」的話，兩者都在星球外側，線段永遠碰不到方塊（實測切割次數 0），
+       所以光束沿衛星→目標方向延伸出去，才是真的在切星球。 */
+    const beam = G.satPos.find((p) => p.s.id === 'beam');
+    if (beam) {
+      const tx = target ? target.x : ship.x;
+      const ty = target ? target.y : ship.y;
+      let dx = tx - beam.x, dy = ty - beam.y;
+      const len = Math.hypot(dx, dy) || 1;
+      dx /= len; dy /= len;
+      const reach = len + 60;                     // 穿過目標再往前一點
+      G.beamSeg = { x1: beam.x, y1: beam.y, x2: beam.x + dx * reach, y2: beam.y + dy * reach,
+                    w: Math.min(4 + beam.lv * 0.12, 10) };
+      G.beamLink = { x1: ship.x, y1: ship.y, x2: beam.x, y2: beam.y };
+      G.beamTick -= dt * rateMult;
+      if (G.beamTick <= 0) {
+        G.beamTick = CFG.SAT.beam.tick;
+        const dmg = satDamage(beam.lv, CFG.SAT.beam.dmgMult);
+        G.planet.blocks.forEach((b) => {
+          if (!b.alive) return;
+          if (pointSegDist(b.x, b.y, G.beamSeg.x1, G.beamSeg.y1, G.beamSeg.x2, G.beamSeg.y2) <= CFG.SAT.beam.width) {
+            hit(b, dmg);
+            G.satStats.beam++;
+          }
+        });
+      }
+    } else {
+      G.beamSeg = null; G.beamLink = null;
+    }
   }
 
+  /* 點到線段距離（雷射切割判定用） */
   function pointSegDist(px, py, x1, y1, x2, y2) {
     const dx = x2 - x1, dy = y2 - y1;
     const len2 = dx * dx + dy * dy || 1;
@@ -470,17 +575,48 @@
     c.strokeStyle = 'rgba(142,240,168,.10)';
     c.stroke();
 
-    /* 衛星與連線 */
+    /* 衛星：六邊形本體 + 白色核心 + 自轉（Step 3 的程序化繪製） */
+    if (G.beamLink) {
+      c.strokeStyle = 'rgba(38,217,255,.35)';
+      c.lineWidth = 1.5;
+      c.beginPath(); c.moveTo(G.beamLink.x1, G.beamLink.y1); c.lineTo(G.beamLink.x2, G.beamLink.y2); c.stroke();
+      c.lineWidth = 1;
+    }
+    if (G.beamSeg) {
+      const bs = G.beamSeg;
+      c.strokeStyle = 'rgba(38,217,255,.85)';
+      c.lineWidth = bs.w;
+      c.beginPath(); c.moveTo(bs.x1, bs.y1); c.lineTo(bs.x2, bs.y2); c.stroke();
+      c.strokeStyle = 'rgba(255,255,255,.5)';
+      c.lineWidth = Math.max(1, bs.w * 0.35);
+      c.beginPath(); c.moveTo(bs.x1, bs.y1); c.lineTo(bs.x2, bs.y2); c.stroke();
+      c.lineWidth = 1;
+    }
     (G.satPos || []).forEach(({ s, x, y }) => {
-      if (s.id === 'beam') {
-        c.strokeStyle = 'rgba(255,122,217,.55)';
-        c.lineWidth = 2;
-        c.beginPath(); c.moveTo(G.ship.x, G.ship.y); c.lineTo(x, y); c.stroke();
-        c.lineWidth = 1;
+      c.save();
+      c.translate(x, y);
+      c.rotate(G.satSpin);
+      c.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const px = Math.cos(a) * 10, py = Math.sin(a) * 10;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
       }
-      c.beginPath(); c.arc(x, y, 6, 0, Math.PI * 2);
-      c.fillStyle = s.color; c.fill();
-      c.strokeStyle = 'rgba(255,255,255,.5)'; c.stroke();
+      c.closePath();
+      c.fillStyle = s.color;
+      c.fill();
+      c.strokeStyle = 'rgba(255,255,255,.55)';
+      c.stroke();
+      c.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2;
+        const px = Math.cos(a) * 4.5, py = Math.sin(a) * 4.5;
+        if (i === 0) c.moveTo(px, py); else c.lineTo(px, py);
+      }
+      c.closePath();
+      c.fillStyle = '#ffffff';
+      c.fill();
+      c.restore();
     });
 
     /* 子彈 */
@@ -518,16 +654,22 @@
       c.fill();
     });
 
-    /* 特效環 */
+    /* 特效：環（會長大）／固定環／線段 */
     G.fx.forEach((f) => {
       if (!f.alive) return;
       const t = 1 - f.life / f.max;
-      c.beginPath();
-      c.arc(f.x, f.y, f.r * (0.4 + t * 0.9), 0, Math.PI * 2);
-      c.strokeStyle = f.color;
       c.globalAlpha = Math.max(0, 1 - t);
-      c.lineWidth = 2;
-      c.stroke();
+      if (f.kind === 'line') {
+        c.strokeStyle = f.color;
+        c.lineWidth = 2;
+        c.beginPath(); c.moveTo(f.x1, f.y1); c.lineTo(f.x2, f.y2); c.stroke();
+      } else {
+        c.beginPath();
+        c.arc(f.x, f.y, f.kind === 'ring-fixed' ? f.r : f.r * (0.4 + t * 0.9), 0, Math.PI * 2);
+        c.strokeStyle = f.color;
+        c.lineWidth = 2;
+        c.stroke();
+      }
       c.globalAlpha = 1;
       c.lineWidth = 1;
     });
@@ -620,5 +762,8 @@
     get planet() { return G.planet; },
     get ship() { return G.ship; },
     get fps() { return G.stats.fps; },
+    get satPositions() { return G.satPos || []; },
+    get satStats() { return G.satStats; },
+    satDamage,
   };
 })(window);

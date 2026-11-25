@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  const VERSION = '0.1.0';
+  const VERSION = '0.2.0';
 
   /* ---------- 星球與方塊 ---------- */
   const PLANET = {
@@ -76,14 +76,27 @@
   ];
 
   /* ---------- 衛星（6 種） ---------- */
+  /* radius / speed 照 Step 3 的 SAT_CONFIGS：每顆有自己的軌道半徑與轉速（負值＝逆向） */
   const SATELLITES = [
-    { id: 'collector', name: '採集衛星',   color: '#8ef0a8', desc: '資源獲取 +300% 光環' },
-    { id: 'bomber',    name: '爆破衛星',   color: '#ffb36b', desc: '定期投放高爆核彈' },
-    { id: 'beam',      name: '雷射衛星',   color: '#ff7ad9', desc: '與飛船連線切割' },
-    { id: 'mirror',    name: '複製衛星',   color: '#a9d4ff', desc: '複製 50% 主武器彈幕' },
-    { id: 'crit',      name: '暴擊衛星',   color: '#ffd166', desc: '+50% 暴擊率 / +300% 暴傷' },
-    { id: 'chrono',    name: '時空衛星',   color: '#b48cff', desc: '週期性 3 倍攻速' },
+    { id: 'collector', name: '採集衛星', color: '#33f28c', radius: 85,  speed: 2.4,  desc: '定期抽取金幣與寶石' },
+    { id: 'bomber',    name: '爆破衛星', color: '#ff6626', radius: 105, speed: 1.8,  desc: '定期投擲高爆核彈（範圍 115）' },
+    { id: 'beam',      name: '雷射衛星', color: '#26d9ff', radius: 115, speed: 2.1,  desc: '與飛船連線切割沿途方塊' },
+    { id: 'mirror',    name: '複製衛星', color: '#d959ff', radius: 95,  speed: -2.2, desc: '複製主武器彈幕（隨等級提升）' },
+    { id: 'crit',      name: '暴擊衛星', color: '#ffd933', radius: 130, speed: 1.5,  desc: '+50% 暴擊率 / +300% 暴傷' },
+    { id: 'chrono',    name: '時空衛星', color: '#8cbfff', radius: 130, speed: -1.5, desc: '週期性 3 倍攻速' },
   ];
+
+  /* 衛星能力（Step 3 數值）：傷害 = mult × 1.24^(lv-1) × 18 × 星塵倍率 × 星區成長 */
+  const SAT = {
+    dmgBase: 18,
+    dmgGrow: 1.24,
+    sectorGrow: 1.35,
+    collector: { interval: 1.5, minInterval: 0.35, perLv: 0.02, gold: 25, gemChance: 0.25 },
+    bomber:    { interval: 1.8, minInterval: 0.45, perLv: 0.025, radius: 115, dmgMult: 12 },
+    mirror:    { interval: 0.28, ratioBase: 0.5, ratioPerLv: 0.01, dmgMult: 2.2 },
+    beam:      { tick: 0.1, width: 26, dmgMult: 3.0 },
+    ring:      { interval: 4.0, radius: 36 },
+  };
 
   /* ---------- 裝備（3 件） ---------- */
   const GEAR = [
@@ -154,6 +167,6 @@
 
   global.CFG = {
     VERSION, PLANET, BLOCK, ECON, RARITY, SKILLS, DICE, WEAPONS, SATELLITES, GEAR,
-    PASS_TIERS, BUNDLES, SUPPLY, BALANCE, T, EN,
+    PASS_TIERS, BUNDLES, SUPPLY, BALANCE, SAT, T, EN,
   };
 })(window);
